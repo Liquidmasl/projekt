@@ -5,3 +5,39 @@
 .rule {
     color: white;
 }
+
+#smaller {
+    /*top: 30% !important;*/
+}
+
+
+#smaller h6 {
+
+    font-weight: 250;
+}
+
+
+#smaller h2 {
+    font-size: 25px;
+    font-weight: 500;
+    color: #232d39;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+  
+  #smaller h2 em {
+    font-style: normal;
+    color: #ed563b;
+  }
+
+  .murderContent h1{
+
+    font-size: small;
+
+  }
+
+  .caption {
+    padding-top: 200px;
+  }
