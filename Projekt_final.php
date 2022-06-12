@@ -75,7 +75,7 @@ https://templatemo.com/tm-548-training-studio
                 <h2>Habt Spaß mit unserem <em>Mörderspiel</em></h2>
                 <?php
 
-                $currentContractId = -1;
+
 
                 //       if(isset($_POST["senden"])){		
 
@@ -86,103 +86,8 @@ https://templatemo.com/tm-548-training-studio
                 $userName = $_GET["userName"];
 
 
-                $sql = "SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE UserName = '$userName') THEN 1 ELSE 0 END AS DoesUserExist";
-                $abfrage = $db->query($sql);
 
-
-
-
-                if ($abfrage->fetch()[0] == 1) {
-
-                    $userID = getUserId($userName, $db);
-
-                    $sql = "SELECT Alive FROM Users WHERE UserID = '$userID'";
-                    $abfrage = $db->query($sql);
-                    $alive = $abfrage->fetch()[0];
-                    if ($alive) {
-
-
-
-
-                        $sql = "SELECT MurderID, TargetID, executed, confirmed, KillerID FROM murdertable WHERE KillerID = '$userID' OR TargetID  = '$userID'";
-
-                        $abfrage = $db->query($sql);
-
-
-
-                        $maybeDead = False;
-
-                        $dbhits = [];
-
-                        //Ausgehender kill noch nicht confirmed, alles andere muss warten!
-                        $readyForMore = true;
-                        while ($row = $abfrage->fetch()) {
-                            array_push($dbhits, $row);
-
-
-                            if ($row["KillerID"] == $userID and $row["executed"] == 1 and $row["confirmed"] == 0) {
-                                echo "<h6>" . "Gratuliere zu deinem Kill! Dein Opfer hat die Eliminierung noch nicht bestätigt. Bitte die Person darum!" . "</h6>" . "<br>";
-                                echo "<h6>" . "Solange nicht bestätigt ist, kannst du nicht weiterspielen!" . "</h6>";
-                                $readyForMore = false;
-                                break;
-                            }
-                        }
-
-                        //wenn kein ausgehender unbestätigter kill: Check ob man noch lebt! 
-                        if ($readyForMore) {
-                            foreach ($dbhits as $row) {
-
-                                if ($row["TargetID"] == $userID and $row["executed"] == 1 and $row["confirmed"] == 0) {
-                                    $maybeDead = True;
-
-                                    echo "<h6>" . "Du wurdest getötet? ";
-                                    echo "bitte antworte ehrlich! ;)";
-                                    echo "<form  method = 'post'>
-                            <input type = 'submit' value='Ja... ich bin tot...  ):' name='killConfirmed' />
-                            <input type = 'submit' value='STIMMT GARNICHT' name='killDenied' />
-                            </form>" . "</h6>";
-
-                                    $currentContractId = $row["MurderID"];
-                                    //echo $currentContractId;
-                                    break;
-                                }
-                            }
-
-
-
-                            if (!$maybeDead) {
-
-                                foreach ($dbhits as $row) {
-
-                                    if ($row["KillerID"] == $userID and $row["executed"] == 0 and $row["confirmed"] == 0) {
-                                        echo "<h6>Hallo " . $userName . ", dein aktuelles Ziel ist " . getUserName($row["TargetID"] . "</h6>" . "<br>", $db); //." - ".$row["MurderID"];
-
-
-                                        echo    "<form  method = 'post'>
-                                    <p><input type = 'submit' value='Ich habe den Mord durchgeführt' name='killed' />
-                                    </form>";
-
-
-                                        $currentContractId = $row["MurderID"];
-                                        break;
-                                    } elseif ($row["executed"] == 1 and $row["confirmed"] == 1) {
-                                        echo "<h6>" . "Dein Mord an " . getUserName($row["TargetID"], $db) . " wurde bestätigt, weiter gehts!" . "</h6>";
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        echo "<h6>" . "Sorry, du wurdest ermordet!" . "</h6>";
-                    }
-                } else {
-
-                    echo "<h6>" . "Willst du mitspielen?";
-                    echo "<form  method = 'post'>
-                <p><input type = 'submit' value='JA, ICH WILL MITSPIELEN' name='joinGame' />
-              </form>";
-                }
-
-
+                $currentContractId = checkUserStatus($userName, $db);
 
 
 
@@ -238,6 +143,106 @@ https://templatemo.com/tm-548-training-studio
                 }
 
 
+                function checkUserStatus($userName, $db)
+                {
+
+
+                    $sql = "SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE UserName = '$userName') THEN 1 ELSE 0 END AS DoesUserExist";
+                    $abfrage = $db->query($sql);
+
+
+                    if ($abfrage->fetch()[0] == 0) {
+                        //User did not join game yet
+
+                        echo "<h6>" . "Willst du mitspielen?";
+                        echo "<form  method = 'post'>
+                        <p><input type = 'submit' value='JA, ICH WILL MITSPIELEN' name='joinGame' />
+                        </form>";
+                        return;
+                    }
+
+
+
+
+                    $userID = getUserId($userName, $db);
+
+                    $sql = "SELECT Alive FROM Users WHERE UserID = '$userID'";
+                    $abfrage = $db->query($sql);
+                    $alive = $abfrage->fetch()[0];
+
+                    if (!$alive) {
+                        echo "<h6>" . "Sorry, du wurdest ermordet!" . "</h6>";
+                        echo "<p> Für dich ist das Spiel vorbei.. Better luck next time!</p>";
+                        return;
+                    }
+
+
+
+
+
+
+                    $sql = "SELECT MurderID, TargetID, executed, confirmed, KillerID FROM murdertable WHERE KillerID = '$userID' OR TargetID  = '$userID'";
+
+                    $abfrage = $db->query($sql);
+
+
+
+                    $maybeDead = False;
+
+                    $dbhits = [];
+
+                    //Ausgehender kill noch nicht confirmed, alles andere muss warten!
+
+                    while ($row = $abfrage->fetch()) {
+                        array_push($dbhits, $row);
+
+
+                        if ($row["KillerID"] == $userID and $row["executed"] == 1 and $row["confirmed"] == 0) {
+                            echo "<h6>" . "Gratuliere zu deinem Kill! Dein Opfer hat die Eliminierung noch nicht bestätigt. Bitte die Person auf die Platform zu schauen und dort den Kill zu bestätigen!" . "</h6>" . "<br>";
+                            echo "<h6>" . "Solange nicht bestätigt ist, kannst du nicht weiterspielen!" . "</h6>";
+                            echo "<p> Du kannst in der Zwischenzeit trotzdem selbst getötet werden, du kannst dein Ableben aber erst bestätigen wenn dein Opfer selbst bestätigt oder abgelehnt hat </p>";
+                            return;
+                        }
+                    }
+
+                    //wenn kein ausgehender unbestätigter kill: Check ob man noch lebt! 
+
+                    foreach ($dbhits as $row) {
+
+                        if ($row["TargetID"] == $userID and $row["executed"] == 1 and $row["confirmed"] == 0) {
+                            $maybeDead = True;
+
+                            echo "<h2>" . "Du wurdest getötet? " . "</h2>";
+                            echo "bitte antworte ehrlich! ;)";
+                            echo "<form  method = 'post'>
+                            <input type = 'submit' value='Ja... ich bin tot...  ):' name='killConfirmed' />
+                            <input type = 'submit' value='STIMMT GARNICHT' name='killDenied' />
+                            </form>";
+
+                            return $row["MurderID"];
+                        }
+                    }
+
+
+                    foreach ($dbhits as $row) {
+
+                        if ($row["KillerID"] == $userID and $row["executed"] == 0 and $row["confirmed"] == 0) {
+                            echo "<br><br><h6>Hallo " . $userName . ", dein aktuelles Ziel ist " . getUserName($row["TargetID"] . "</h6>" . "<br>", $db); //." - ".$row["MurderID"];
+
+
+                            echo    "<form  method = 'post'>
+                                    <p><input type = 'submit' value='Ich habe den Mord durchgeführt' name='killed' />
+                                    </form>";
+
+
+                            $currentContractId = $row["MurderID"];
+                            break;
+                        } elseif ($row["executed"] == 1 and $row["confirmed"] == 1) {
+                            echo "<h6>" . "Dein Mord an " . getUserName($row["TargetID"], $db) . " wurde bestätigt, weiter gehts!" . "</h6>";
+                        }
+                    }
+                }
+
                 function getUserName($userID, $db)
                 {
 
@@ -283,9 +288,9 @@ https://templatemo.com/tm-548-training-studio
                             <b>"Erledige Bertram"</b>. Man zieht also los und sucht Bertram, den man erst mal erkennen und dann "umbringen" soll. <br>
                             Nun geht es natürlich (bitte) nicht um einen tatsächlichen Brutalen überfall! <br>
                             <span style="color:white">Das Umbringen funktioniert so: <br>
-                            Der Mörder muss seinem Opfer einen gegenstand geben, und das Opfer muss ihn annehmen. <br>
-                            Das wars auch schon! <br>
-                            </p>
+                                Der Mörder muss seinem Opfer einen gegenstand geben, und das Opfer muss ihn annehmen. <br>
+                                Das wars auch schon! <br>
+                        </p>
                         </p>
                         <hr>
                         <p>
@@ -293,7 +298,7 @@ https://templatemo.com/tm-548-training-studio
                             <b>Der Mörder darf seinem Opfer nichts in die Hand drücken oder anders das Annehmen aufzwingen. Der Opfer muss es wirklich selbstständig und Freiwillig entgegen nehmen!</b>
                             <br>
                             Hat man jemanden erfolgreich ermordet, muss man ihm dies sofort sagen. <br>
-                            Melde deinen Mord hier auf der Plattform und lasse ihn von deinem Opfer bestätigen (das muss er ebenfalls selber auf hier auf der Platform machen). 
+                            Melde deinen Mord hier auf der Plattform und lasse ihn von deinem Opfer bestätigen (das muss er ebenfalls selber auf hier auf der Platform machen).
                             <br>
                             <br>
                             <b><span style="color:red">Das Opfer ist dann raus aus dem Spiel.</span></b>
