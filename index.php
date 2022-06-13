@@ -27,12 +27,13 @@ https://templatemo.com/tm-548-training-studio
 
     <link rel="stylesheet" href="assets/css/templatemo-training-studio.css">
     <link rel="stylesheet" href="Projekt_Moerder_CSS.css">
+    <script src="confetti.js"></script>
 
 </head>
 
 <body>
 
-    <div id="js-preloader" class="js-preloader">
+    <!--div id="js-preloader" class="js-preloader">
         <div class="preloader-inner">
             <span class="dot"></span>
             <div class="dots">
@@ -41,7 +42,7 @@ https://templatemo.com/tm-548-training-studio
                 <span></span>
             </div>
         </div>
-    </div>
+    </div-->
 
     <header class="header-area header-sticky">
         <div class="container">
@@ -72,21 +73,21 @@ https://templatemo.com/tm-548-training-studio
 
             <?php
 
-            $userName = $_GET["userName"];
+            $userID = $_GET["userID"];
 
-            $userName = RemoveSpecialChar($userName);
+            $userID = hash('md5', $userID);
 
 
-            $currentContractId = checkUserStatus($userName, $db);
+            $currentContractId = checkUserStatus($userID, $db);
 
             if (isset($_POST["killConfirmed"])) {
-                $userName = $_GET["userName"];
+                
                 echo $currentContractId;
 
                 $sql = "UPDATE murdertable SET confirmed = true WHERE MurderID = '$currentContractId'";
                 $abfrage = $db->query($sql); //kill wird auf confirmed gesetzt
 
-                $userID = getUserId($userName, $db); //user wird auf tot gesetzt
+                
                 $sql = "UPDATE users SET alive = false WHERE UserID = '$userID'";
                 $db->query($sql);
 
@@ -105,19 +106,21 @@ https://templatemo.com/tm-548-training-studio
             }
 
             if (isset($_POST["killDenied"])) {
-                $userName = $_GET["userName"];
+                
 
                 $sql = "UPDATE murdertable SET executed = false WHERE MurderID = '$currentContractId' ";
                 $db->query($sql);
                 echo "<meta http-equiv='refresh' content='0'>";
-                //echo "Congrats";
-
             }
 
             if (isset($_POST["joinGame"])) {
-                $userName = $_GET["userName"];
+                
+                $firstName = $_GET["firstName"];
+                $lastName = $_GET["lastName"];
+                $nickName = "placeholder-nickname";
+                //TODO: get Nick name
 
-                $sql = "INSERT INTO users (UserName) VALUES ('$userName')";
+                $sql = "INSERT INTO users (UserID, FirstName, Lastname, NickName) VALUES ('$userID', '$firstName', '$lastName', '$nickName')";
                 $db->query($sql);
                 echo "<meta http-equiv='refresh' content='0'>";
                 //echo "Congrats";
@@ -127,21 +130,16 @@ https://templatemo.com/tm-548-training-studio
             if (isset($_POST["killed"])) {
                 $sql = "UPDATE murdertable SET executed = true WHERE MurderID = '$currentContractId' ";
                 $db->query($sql);
-                echo "Gratuliere zu deinem Mord! Um dein nächstes Ziel zu bekommen, bitte dein Opfer den Mord zu bestätigen";
+                echo "<meta http-equiv='refresh' content='0'>";
+                //echo "Gratuliere zu deinem Mord! Um dein nächstes Ziel zu bekommen, bitte dein Opfer den Mord zu bestätigen";
             }
 
 
-            function RemoveSpecialChar($str)
-            {
-                $res = preg_replace('/[0-9\@\.\;\" "]+/', '', $str);
-                return $res;
-            }
-
-            function checkUserStatus($userName, $db)
+            function checkUserStatus($userID, $db)
             {
 
 
-                $sql = "SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE UserName = '$userName') THEN 1 ELSE 0 END AS DoesUserExist";
+                $sql = "SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE UserID = '$userID') THEN 1 ELSE 0 END AS DoesUserExist";
                 $abfrage = $db->query($sql);
 
 
@@ -163,10 +161,7 @@ https://templatemo.com/tm-548-training-studio
                 echo "<h6>finde dein Opfer, eliminiere es*</h6>";
                 echo "<h2>Habt Spaß mit unserem <em>Mörderspiel</em></h2>";
                 echo "<div class=\"murderContent\">";
-
-
-                $userID = getUserId($userName, $db);
-
+               
                 $sql = "SELECT Alive FROM Users WHERE UserID = '$userID'";
                 $abfrage = $db->query($sql);
                 $alive = $abfrage->fetch()[0];
@@ -189,10 +184,10 @@ https://templatemo.com/tm-548-training-studio
 
                     if ($row["KillerID"] == $userID and $row["executed"] == 1 and $row["confirmed"] == 0) {
                         echo "<br><br><br>";
-                        echo "<h1>" . "Gratuliere zu deinem Kill! Dein Opfer hat die Eliminierung noch nicht bestätigt." . "</h1>";
-                        echo "<h2>Bitte die Person auf die Platform zu schauen und dort den Kill zu bestätigen!" . "</h2>" . "<br>";
+                        echo "<h2>" . "Gratuliere zu deinem Kill! <br>". "<span style=\"color: red; font-weight: 500;\">" . getName($row["TargetID"], $db) . "</span>" . " hat die Eliminierung noch nicht bestätigt." . "</h1>";
+                        echo "<h6>Bitte die Person auf die Platform zu schauen und dort den Kill zu bestätigen!" . "</h6>" . "<br>";
                         echo "<h6>" . "Solange nicht bestätigt ist, kannst du nicht weiterspielen!" . "</h6>";
-                        echo "<p> Du kannst in der Zwischenzeit trotzdem selbst getötet werden, du kannst dein Ableben aber erst bestätigen wenn dein Opfer selbst bestätigt oder abgelehnt hat </p>";
+                        echo "<p> Du kannst in der Zwischenzeit trotzdem selbst getötet werden, du kannst dein Ableben aber erst bestätigen wenn dein Opfer selbst bestätigt oder abgelehnt hat. </p>";
                         return;
                     }
                 }
@@ -200,9 +195,8 @@ https://templatemo.com/tm-548-training-studio
                 foreach ($dbhits as $row) {
 
                     if ($row["TargetID"] == $userID and $row["executed"] == 1 and $row["confirmed"] == 0) {
-                        $maybeDead = True;
 
-                        echo "<h2>" . "Du wurdest getötet? " . "</h2>";
+                        echo "<h2>" . "Wurdest du getötet? " . "</h2>";
                         echo "bitte antworte ehrlich! ;)";
                         echo "<form  method = 'post'>
                             <input type = 'submit' value='Ja... ich bin tot...  ):' name='killConfirmed' />
@@ -216,38 +210,45 @@ https://templatemo.com/tm-548-training-studio
                 foreach ($dbhits as $row) {
 
                     if ($row["KillerID"] == $userID and $row["executed"] == 0 and $row["confirmed"] == 0) {
-                        echo "<br><br><h6>Hallo " . $userName . ", dein aktuelles Ziel ist " . getUserName($row["TargetID"] . "</h6>" . "<br>", $db); //." - ".$row["MurderID"];
 
+
+                        if ($row["KillerID"] == $row["TargetID"]){
+
+                            echo "<br><br><br>";
+                            echo "<script>startConfetti();</script>";
+                            echo "<h2> DU BIST DER LETZTE AM LEBEN! DU HAST GEWONNEN!</h2>";
+                            echo "<h3> Go get those free Shots ;)</h3>";
+                            return;
+                        }
+
+                        echo "<br><br><h6>Hallo " . getName($userID, $db) . ", dein aktuelles Ziel ist <span style=\"color: red; font-weight: 500;\">" . getName($row["TargetID"], $db) . "</span></h6>"; 
+                        echo "<br>";
 
                         echo    "<form  method = 'post'>
-                                    <p><input type = 'submit' value='Ich habe den Mord durchgeführt' name='killed' />
+                                    <p><input type = 'submit' value='Ich habe mein Target (". getName($row["TargetID"], $db) .") getötet!' name='killed' />
                                     </form>";
 
 
                         return $row["MurderID"];
-                        break;
+                        
                     } elseif ($row["executed"] == 1 and $row["confirmed"] == 1) {
-                        echo "<h6>" . "Dein Mord an " . getUserName($row["TargetID"], $db) . " wurde bestätigt, weiter gehts!" . "</h6>";
+                        echo "<h6>" . "Dein Mord an " . getName($row["TargetID"], $db) . " wurde bestätigt, good Kill, weiter gehts!" . "</h6>";
                     }
                 }
             }
 
 
-            function getUserName($userID, $db)
+            function getName($userID, $db)
             {
-                $sql = "SELECT UserName FROM Users WHERE UserID  = '$userID'";
+                $sql = "SELECT FirstName, LastName FROM Users WHERE UserID  = '$userID'";
                 $abfrage = $db->query($sql);
 
-                return $abfrage->fetch()[0];
+                $res = $abfrage->fetch();
+
+                return $res[0] . " " . $res[1];
             }
 
-            function getUserId($userName, $db)
-            {
-                $sql = "SELECT UserID FROM Users WHERE UserName  = '$userName'";
-                $abfrage = $db->query($sql);
 
-                return $abfrage->fetch()[0];
-            }
 
 
             ?>
